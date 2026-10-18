@@ -1,0 +1,494 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strawberry's Studio 🍓</title>
+<style>
+:root {
+  --bg: #211c27;
+  --panel: #302735;
+  --pink: #ff8fc8;
+  --text: #fff0f7;
+  --muted: #c7b6c7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+header {
+  padding: 16px 22px;
+  background: #382b3c;
+  border-bottom: 1px solid #594258;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+h1 { margin: 0; font-size: 22px; }
+h1 span { color: var(--pink); }
+button, select, input {
+  font: inherit;
+}
+button, select {
+  background: #49394d;
+  border: 1px solid #6e526e;
+  color: var(--text);
+  border-radius: 9px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--pink); }
+button.active, .primary {
+  background: var(--pink);
+  color: #351c2b;
+  border-color: var(--pink);
+  font-weight: 700;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 230px;
+  gap: 12px;
+  padding: 12px;
+  min-height: calc(100vh - 70px);
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid #594258;
+  border-radius: 13px;
+  padding: 14px;
+}
+.panel h2 {
+  font-size: 15px;
+  color: var(--pink);
+  margin: 0 0 14px;
+}
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.tools button { padding: 10px 4px; font-size: 13px; }
+.control { margin-top: 18px; }
+.control label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+input[type="range"] { width: 100%; accent-color: var(--pink); }
+input[type="color"] {
+  width: 100%; height: 42px; border: 0;
+  background: transparent; cursor: pointer;
+}
+.workspace { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.canvas-wrap {
+  flex: 1;
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: #17141b;
+  border: 1px solid #594258;
+  border-radius: 13px;
+  overflow: auto;
+}
+canvas {
+  background: white;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  cursor: crosshair;
+  touch-action: none;
+  box-shadow: 0 5px 24px #0005;
+}
+.layer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 6px;
+  border-bottom: 1px solid #594258;
+  font-size: 13px;
+}
+.layer.selected { background: #594052; border-radius: 7px; }
+.layer span { flex: 1; }
+.layer button { padding: 4px 7px; }
+.muted { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+#status { color: var(--muted); font-size: 12px; }
+@media(max-width: 850px) {
+  .layout { grid-template-columns: 1fr; }
+  .panel { min-width: 0; }
+  .tools { grid-template-columns: repeat(4, 1fr); }
+  .canvas-wrap { min-height: 300px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🍓 <span>Strawberry's Studio</span></h1>
+  <div class="toolbar">
+    <button id="undo">↶ Deshacer</button>
+    <button id="clear">Limpiar lienzo</button>
+    <button class="primary" id="export">Guardar PNG</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <h2>🎨 Herramientas</h2>
+    <div class="tools">
+      <button class="active" data-tool="brush">🖌️ Pincel</button>
+      <button data-tool="eraser">🩹 Borrador</button>
+      <button data-tool="line">📏 Línea</button>
+      <button data-tool="rect">▢ Rectángulo</button>
+      <button data-tool="circle">◯ Círculo</button>
+      <button data-tool="eyedropper">💧 Color</button>
+    </div>
+    <div class="control">
+      <label for="color">Color</label>
+      <input id="color" type="color" value="#e85d9e">
+    </div>
+    <div class="control">
+      <label for="size">Tamaño <span id="sizeValue">8</span></label>
+      <input id="size" type="range" min="1" max="60" value="8">
+    </div>
+    <div class="control">
+      <label for="opacity">Opacidad <span id="opacityValue">100%</span></label>
+      <input id="opacity" type="range" min="5" max="100" value="100">
+    </div>
+    <div class="control">
+      <label for="stabilizer">Estabilizador <span id="stabValue">4</span></label>
+      <input id="stabilizer" type="range" min="1" max="12" value="4">
+    </div>
+    <p class="muted">Consejo: arrastra el ratón o tu dedo sobre el lienzo para dibujar.</p>
+  </aside>
+
+  <section class="workspace">
+    <div class="toolbar">
+      <button id="new">＋ Nuevo dibujo</button>
+      <button id="saveProject">💾 Guardar proyecto</button>
+      <button id="openProject">📂 Abrir proyecto</button>
+      <input id="projectFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="1200" height="900"></canvas>
+    </div>
+    <div id="status">Listo para dibujar 🍓</div>
+  </section>
+
+  <aside class="panel">
+    <h2>🗂️ Capas</h2>
+    <div id="layers"></div>
+    <div class="actions">
+      <button id="addLayer">＋ Capa</button>
+      <button id="deleteLayer">－ Eliminar</button>
+      <button id="upLayer">↑ Subir</button>
+      <button id="downLayer">↓ Bajar</button>
+    </div>
+    <p class="muted">Dibuja en diferentes capas para organizar tu ilustración.</p>
+    <hr style="border-color:#594258;margin:20px 0">
+    <h2>✨ Próximamente</h2>
+    <p class="muted">Animación por fotogramas, pinceles personalizados y más herramientas.</p>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const colorInput = document.getElementById('color');
+  const sizeInput = document.getElementById('size');
+  const opacityInput = document.getElementById('opacity');
+  const stabilizer = document.getElementById('stabilizer');
+  const status = document.getElementById('status');
+  const layersEl = document.getElementById('layers');
+
+  let tool = 'brush';
+  let drawing = false;
+  let start = null;
+  let last = null;
+  let active = 0;
+  let nextId = 2;
+  let layers = [];
+  let undoStack = [];
+
+  function makeLayer(name) {
+    const c = document.createElement('canvas');
+    c.width = canvas.width;
+    c.height = canvas.height;
+    return { id: nextId++, name, canvas: c, visible: true };
+  }
+  function init() {
+    layers = [makeLayer('Capa 1')];
+    active = 0;
+    undoStack = [];
+    renderLayers();
+    paint();
+    status.textContent = 'Nuevo dibujo creado 🍓';
+  }
+  function paint() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    layers.forEach(layer => {
+      if (layer.visible) ctx.drawImage(layer.canvas, 0, 0);
+    });
+  }
+  function renderLayers() {
+    layersEl.replaceChildren();
+    [...layers].reverse().forEach(layer => {
+      const index = layers.indexOf(layer);
+      const row = document.createElement('div');
+      row.className = 'layer' + (index === active ? ' selected' : '');
+      const eye = document.createElement('button');
+      eye.textContent = layer.visible ? '👁' : '🚫';
+      eye.title = 'Mostrar u ocultar capa';
+      eye.onclick = e => {
+        e.stopPropagation();
+        layer.visible = !layer.visible;
+        renderLayers(); paint();
+      };
+      const name = document.createElement('span');
+      name.textContent = layer.name;
+      row.append(eye, name);
+      row.onclick = () => { active = index; renderLayers(); };
+      layersEl.append(row);
+    });
+  }
+  function point(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * canvas.width / r.width,
+      y: (e.clientY - r.top) * canvas.height / r.height
+    };
+  }
+  function saveUndo() {
+    undoStack.push(layers.map(l => ({
+      id: l.id, name: l.name, visible: l.visible,
+      image: l.canvas.toDataURL()
+    })));
+    if (undoStack.length > 20) undoStack.shift();
+  }
+  function restoreImage(data, target) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const c = target.getContext('2d');
+        c.clearRect(0, 0, target.width, target.height);
+        c.drawImage(img, 0, 0);
+        resolve();
+      };
+      img.src = data;
+    });
+  }
+  async function undo() {
+    const previous = undoStack.pop();
+    if (!previous) { status.textContent = 'No hay más acciones para deshacer.'; return; }
+    layers = [];
+    for (const item of previous) {
+      const l = makeLayer(item.name);
+      l.id = item.id;
+      l.visible = item.visible;
+      await restoreImage(item.image, l.canvas);
+      layers.push(l);
+    }
+    active = Math.min(active, layers.length - 1);
+    renderLayers(); paint();
+    status.textContent = 'Acción deshecha.';
+  }
+  function settings() {
+    return {
+      color: colorInput.value,
+      size: Number(sizeInput.value),
+      opacity: Number(opacityInput.value) / 100
+    };
+  }
+  function strokeLine(a, b) {
+    const s = settings();
+    const c = layers[active].canvas.getContext('2d');
+    c.save();
+    c.globalAlpha = s.opacity;
+    c.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    c.strokeStyle = s.color;
+    c.fillStyle = s.color;
+    c.lineWidth = s.size;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    c.moveTo(a.x, a.y);
+    c.lineTo(b.x, b.y);
+    c.stroke();
+    c.restore();
+  }
+  function drawShape(a, b, mode) {
+    const c = layers[active].canvas.getContext('2d');
+    const s = settings();
+    c.save();
+    c.globalAlpha = s.opacity;
+    c.strokeStyle = s.color;
+    c.lineWidth = s.size;
+    c.lineCap = 'round';
+    c.beginPath();
+    if (mode === 'line') {
+      c.moveTo(a.x, a.y); c.lineTo(b.x, b.y);
+    } else if (mode === 'rect') {
+      c.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+    } else if (mode === 'circle') {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      c.ellipse(a.x, a.y, Math.abs(dx), Math.abs(dy), 0, 0, Math.PI * 2);
+    }
+    c.stroke();
+    c.restore();
+  }
+  function previewShape(a, b, mode) {
+    paint();
+    ctx.save();
+    const s = settings();
+    ctx.globalAlpha = s.opacity;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.size;
+    ctx.beginPath();
+    if (mode === 'line') { ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); }
+    if (mode === 'rect') ctx.rect(a.x,a.y,b.x-a.x,b.y-a.y);
+    if (mode === 'circle') ctx.ellipse(a.x,a.y,Math.abs(b.x-a.x),Math.abs(b.y-a.y),0,0,Math.PI*2);
+    ctx.stroke(); ctx.restore();
+  }
+
+  document.querySelectorAll('[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tool = btn.dataset.tool;
+      document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b === btn));
+      canvas.style.cursor = tool === 'eyedropper' ? 'copy' : 'crosshair';
+    });
+  });
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (tool === 'eyedropper') {
+      const p = point(e);
+      const px = ctx.getImageData(Math.round(p.x), Math.round(p.y), 1, 1).data;
+      colorInput.value = '#' + [px[0],px[1],px[2]].map(v => v.toString(16).padStart(2,'0')).join('');
+      return;
+    }
+    if (!layers[active]) return;
+    saveUndo();
+    drawing = true;
+    canvas.setPointerCapture(e.pointerId);
+    start = last = point(e);
+    if (['brush','eraser'].includes(tool)) {
+      strokeLine(last, {x:last.x+0.01,y:last.y+0.01});
+    }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = point(e);
+    if (['brush','eraser'].includes(tool)) {
+      const k = Number(stabilizer.value);
+      const smooth = { x: last.x + (p.x-last.x)/k, y: last.y + (p.y-last.y)/k };
+      strokeLine(last, smooth);
+      last = smooth;
+      paint();
+    } else {
+      previewShape(start, p, tool);
+    }
+  });
+  function finish(e) {
+    if (!drawing) return;
+    const p = point(e);
+    if (['line','rect','circle'].includes(tool)) drawShape(start,p,tool);
+    drawing = false;
+    paint();
+    status.textContent = 'Dibujo actualizado.';
+  }
+  canvas.addEventListener('pointerup', finish);
+  canvas.addEventListener('pointercancel', () => { drawing = false; paint(); });
+
+  sizeInput.addEventListener('input', () => document.getElementById('sizeValue').textContent = sizeInput.value);
+  opacityInput.addEventListener('input', () => document.getElementById('opacityValue').textContent = opacityInput.value + '%');
+  stabilizer.addEventListener('input', () => document.getElementById('stabValue').textContent = stabilizer.value);
+  document.getElementById('undo').onclick = undo;
+  document.getElementById('clear').onclick = () => {
+    saveUndo();
+    layers[active].canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+    paint(); status.textContent = 'Capa actual limpiada.';
+  };
+  document.getElementById('new').onclick = () => {
+    if (confirm('¿Crear un dibujo nuevo? Se perderá el dibujo actual si no lo guardaste.')) init();
+  };
+  document.getElementById('addLayer').onclick = () => {
+    layers.push(makeLayer('Capa ' + (nextId - 1)));
+    active = layers.length - 1;
+    renderLayers(); paint();
+  };
+  document.getElementById('deleteLayer').onclick = () => {
+    if (layers.length <= 1) { alert('Debe quedar al menos una capa.'); return; }
+    layers.splice(active,1);
+    active = Math.max(0,active-1);
+    renderLayers(); paint();
+  };
+  document.getElementById('upLayer').onclick = () => {
+    if (active < layers.length-1) {
+      [layers[active],layers[active+1]] = [layers[active+1],layers[active]];
+      active++; renderLayers(); paint();
+    }
+  };
+  document.getElementById('downLayer').onclick = () => {
+    if (active > 0) {
+      [layers[active],layers[active-1]] = [layers[active-1],layers[active]];
+      active--; renderLayers(); paint();
+    }
+  };
+  document.getElementById('export').onclick = () => {
+    paint();
+    const a = document.createElement('a');
+    a.download = 'mi-dibujo-strawberry.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    status.textContent = 'PNG exportado.';
+  };
+  document.getElementById('saveProject').onclick = () => {
+    const project = { version:1, width:canvas.width, height:canvas.height,
+      layers:layers.map(l => ({name:l.name,visible:l.visible,image:l.canvas.toDataURL()})) };
+    const blob = new Blob([JSON.stringify(project)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mi-proyecto-strawberry.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    status.textContent = 'Proyecto guardado.';
+  };
+  document.getElementById('openProject').onclick = () => document.getElementById('projectFile').click();
+  document.getElementById('projectFile').onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const project = JSON.parse(await file.text());
+      if (!Array.isArray(project.layers) || !project.width || !project.height) throw new Error('Archivo no válido');
+      canvas.width = project.width; canvas.height = project.height;
+      layers = [];
+      for (const item of project.layers) {
+        const l = makeLayer(item.name || 'Capa');
+        l.visible = item.visible !== false;
+        await restoreImage(item.image, l.canvas);
+        layers.push(l);
+      }
+      if (!layers.length) layers = [makeLayer('Capa 1')];
+      active = 0; undoStack = [];
+      renderLayers(); paint();
+      status.textContent = 'Proyecto abierto.';
+    } catch {
+      alert('No se pudo abrir el proyecto. Selecciona un archivo JSON de Strawberry’s Studio.');
+    }
+    e.target.value = '';
+  };
+  init();
+})();
+</script>
+</body>
+</html>
